@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+   <head>
+      <meta charset="UTF-8">
+      <title>SocketIO Chat Room</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css" />
+      <link href="/stylesheets/print.css" media="print" rel="stylesheet" type="text/css" />
+      <!--[if IE]>
+			<link href="/stylesheets/ie.css" media="screen, projection" rel="stylesheet" type="text/css" />
+		<![endif]-->
+      <link rel="stylesheet" href="//code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css">
+      <script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+      <script src="//code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+      <script src="/socket.io/socket.io.js"></script>
+      <script>
+      var socket = io();
+      var username = null;
+      </script>
+   </head>
+
+   <body>
+      <div data-role="page">
+         <div data-role="header" data-position="fixed">
+         </div>
+         <div data-role="main" class="ui-content">
+            <div data-role="tabs">
+               <div data-role="navbar">
+                  <ul>
+                     <li><a href="#one" class="ui-btn-active">one</a></li>
+                     <li><a href="#two">two</a></li>
+                     <!-- <li><a href="">none</a></li> -->
+                  </ul>
+               </div>
+               <div id="one">
+               </div>
+               <div data-role="footer" data-position="fixed" data-tap-toggle="false">
+                  <a class="ui-btn ui-icon-plus ui-btn-icon-left">Join</a>
+                  <input type="text" name="message" placeholder="I want to say ..." autocomplete="off" data-clear-btn="true">
+               </div>
+               <div id="two">
+                  <p>see</p>
+               </div>
+            </div>
+         </div>
+      </div>
+      <script>
+      $(() => {
+         socket.emit('account', {
+            myApp: 'chat room'
+         });
+      });
+      $('[data-role=footer] a').click(function(event) {
+         if (username) {}
+         else {
+
+         }
+      });
+      $('input').keypress((event) => {
+
+      });
+      $('input').change((event) => {
+         if ($(event.target).is('#loginPage [name=username]')) {
+
+         }
+         else if ($(event.target).is('[name=message]')) {}
+      });
+
+      socket.on('account', (data) => {
+         $('[data-role=footer]>a').attr('href', data.pageId);
+         $(':mobile-pagecontainer').append(data.page);
+         $(data.pageId + '[data-dialog=true]').page({
+            closeBtn: 'right',
+         });
+         $(data.pageId + '[data-role=page]').on('pagebeforecreate', (event, ui) => {
+            $(this).page(_create);
+         });
+         if (!data.isDefaultPage) {
+            $(':mobile-pagecontainer').pagecontainer('change', data.pageId, {
+               changeHash: false,
+               showLoadMsg: true,
+               transition: 'slide',
+            });
+            $('[isAccountPage=true]:not(' + data.pageId + ')').remove();
+            $('[data-role=footer]>a').removeClass('ui-icon-*').addClass('ui-icon-user').text(data.account.username);
+         }
+      });
+      </script>
+   </body>
+
+</html>
