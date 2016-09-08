@@ -2,7 +2,7 @@
 <html lang="en">
 
    <head>
-      <meta charset="UTF-8">
+      <meta charset=" UTF-8">
       <title>SocketIO Chat Room</title>
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css" />
@@ -10,13 +10,15 @@
       <!--[if IE]>
 			<link href="/stylesheets/ie.css" media="screen, projection" rel="stylesheet" type="text/css" />
 		<![endif]-->
-      <link rel="stylesheet" href="//code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css">
-      <script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
-      <script src="//code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+      <link rel="stylesheet" href="/css/jquery.mobile-1.4.5.min.css">
+      <script src="/js/jquery-1.11.1.min.js"></script>
+      <script src="/js/jquery.mobile-1.4.5.min.js"></script>
       <script src="/socket.io/socket.io.js"></script>
       <script>
-      var socket = io();
-      var username = null;
+      var socket = io(),
+         isLoggedIn = false,
+         nextEvent = null,
+         nextData = null;
       </script>
    </head>
 
@@ -34,6 +36,8 @@
                   </ul>
                </div>
                <div id="one">
+                  <ul>
+                  </ul>
                </div>
                <div data-role="footer" data-position="fixed" data-tap-toggle="false">
                   <a class="ui-btn ui-icon-plus ui-btn-icon-left">Join</a>
@@ -51,22 +55,32 @@
             myApp: 'chat room'
          });
       });
-      $('[data-role=footer] a').click(function(event) {
-         if (username) {}
-         else {
-
-         }
-      });
+      $('[data-role=footer] a').click((event) => {});
       $('input').keypress((event) => {
-
-      });
-      $('input').change((event) => {
-         if ($(event.target).is('#loginPage [name=username]')) {
-
+         if (13 == event.which && $('[data-role=footer] [name=message]').val().trim()) {
+            var newEvent = 'chat message',
+               newData = {
+                  myApp: 'chat room',
+                  chatMessage: {
+                     message: $('[data-role=footer] [name=message]').val().trim(),
+                  },
+               };
+            if (isLoggedIn) {
+               socket.emit(newEvent, newData);
+            }
+            else {
+               $('[data-role=footer]>a').click();
+               nextEvent = newEvent;
+               nextData = newData;
+            }
          }
-         else if ($(event.target).is('[name=message]')) {}
       });
-
+      $('input').change((event) => {});
+      socket.on('system', (data) => {
+         if (isLoggedIn) {
+            $('#one ul').append('<li>' + data.system.message + '</li>');
+         }
+      });
       socket.on('account', (data) => {
          $('[data-role=footer]>a').attr('href', data.pageId);
          $(':mobile-pagecontainer').append(data.page);
@@ -82,8 +96,23 @@
                showLoadMsg: true,
                transition: 'slide',
             });
-            $('[isAccountPage=true]:not(' + data.pageId + ')').remove();
             $('[data-role=footer]>a').removeClass('ui-icon-*').addClass('ui-icon-user').text(data.account.username);
+            $('[isAccountPage=true]:not(' + data.pageId + ')').remove();
+            isLoggedIn = true;
+         }
+         $(":mobile-pagecontainer").on("pagecontainerchange", function(event, ui) {
+            if (!$($(":mobile-pagecontainer").pagecontainer("getActivePage")).attr('id')) {
+               if (nextEvent) {
+                  socket.emit(nextEvent, nextData);
+                  nextEvent = nextData = null;
+               }
+            }
+         });
+
+      });
+      socket.on('chat message', (data) => {
+         if (isLoggedIn) {
+            $('#one ul').append('<li>' + data.account.username + ' said: ' + data.chatMessage.message + '</li>');
          }
       });
       </script>

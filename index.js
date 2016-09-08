@@ -36,15 +36,18 @@ socketIO.on( 'connection', ( socket ) => {
 	console.log( new Date() + '\n' + 'Connection: ' + socket.id + ' from ' + socket.handshake.address );
 
 	socket.on( 'account', ( data ) => {
-		console.log( new Date() + '\n' + 'Account: ' + socket.id + ' from ' + socket.handshake.address );
 		handle( socket, 'account', data );
 	} );
 	socket.on( 'chat message', function( data ) {
-		console.log( new Date() + '\n' + 'Chat Message: ' + socket.id + ' from ' + socket.handshake.address );
 		handle( socket, 'chat message', data );
 	} );
 	socket.on( 'disconnect', function() {
 		console.log( new Date() + '\n' + 'Disconnect: ' + socket.id + ' from ' + socket.handshake.address );
+		// socketIO.emit( 'system', {
+		// 	system: {
+		// 		message: socket.myApp.chatRoom.account.username + ' left.',
+		// 	}
+		// } );
 	} );
 } );
 
@@ -55,7 +58,7 @@ function availPropNames( object, propNames ) {
 		for ( propNameIndex in propNamesArray ) {
 			currentPropNames += '.' + propNamesArray[ propNameIndex ];
 			if ( !eval( currentPropNames ) ) {
-				eval( currentPropNames + '=' + ( propNamesArray.length - 1 != propNameIndex ? '{}' : 'null' ) + ';' );
+				eval( currentPropNames + '=' + ( propNamesArray.length - 1 != propNameIndex ? '{}' : 'null' ) );
 			}
 		}
 	}
@@ -100,10 +103,13 @@ function nameEventVars( myApp, event ) {
 }
 
 function authorize( socket, eVarNames, data ) {
-	if ( eVarNames && -1 != eval( eVarNames.prefix + 'Events' ).indexOf( 'account' ) ) {
+	if ( eVarNames && -1 != eval( 'myApp' + eVarNames.myAppPrefix + 'Events' ).indexOf( 'account' ) ) {
 		availPropNames( socket, 'myApp.' + lowWords( eVarNames.myAppPrefix ) + '.account' );
 		if ( !eval( 'socket.myApp.' + lowWords( eVarNames.myAppPrefix ) + '.account' ) && !data.account ) {
 			data.nextEvent = eVarNames.event;
+			data.nextEventData = data[ eVarNames.key ];
+			data[ eVarNames.key ] = undefined;
+			console.log( 'Authorize: ' + JSON.stringify( data ) );
 			handle( socket, 'account', data );
 			return false;
 		}
@@ -113,7 +119,7 @@ function authorize( socket, eVarNames, data ) {
 
 // Handle my app events
 function handle( socket, event, data ) {
-	console.log( data );
+	console.log( new Date() + '\n' + capWords( event ) + ': ' + socket.id + ' from ' + socket.handshake.address );
 	var eVarNames = nameEventVars( data.myApp, event );
 
 	if ( eVarNames ) {
@@ -171,8 +177,15 @@ function myAppChatRoomAccountHandler( socket, eVarNames, data ) {
 			data.pageId = '#accountPage';
 			if ( data.account ) {
 				socket.myApp.chatRoom.account = data.account;
-				console.log( socket.myApp.chatRoom.account );
+				socketIO.emit( 'system', {
+					system: {
+						message: socket.myApp.chatRoom.account.username + ' joined.'
+					},
+				} );
 			}
+			data.account = {
+				username: socket.myApp.chatRoom.account.username,
+			};
 			unit[ 2 ][ 0 ][ 2 ].push(
 				[ 'h1',
 					{},
@@ -243,19 +256,24 @@ function myAppChatRoomAccountHandler( socket, eVarNames, data ) {
 			unit[ 2 ][ 2 ][ 2 ].push( stringNode );
 		}
 		unit[ 0 ] = 'div' + data.pageId;
-		console.log( renderUnit( unit ) );
 		data.page = renderUnit( unit );
 		socket.emit( 'account', data );
-		console.log( data );
 		return true;
 	}
-	else {
-		return false;
-	}
+	return false;
 }
 
 function myAppChatRoomChatMessageHandler( socket, eVarNames, data ) {
-	if ( eVarNames && data.chatMessage && authorize( socket, eVarNames, data ) ) {
+	if ( eVarNames && data.chatMessage ) {
+		socketIO.emit( 'chat message', {
+			myApp: 'chat room',
+			account: {
+				username: socket.myApp.chatRoom.account.username,
+			},
+			chatMessage: {
+				message: data.chatMessage.message,
+			},
+		} );
 		return true;
 	}
 	return false;
